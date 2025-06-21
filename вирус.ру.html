@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Жвачка вызывает геноцид</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      height: 100%;
+      width: 100%;
+    }
+    canvas {
+      display: block;
+      background: #87CEEB;
+      width: 100vw;
+      height: 100vh;
+    }
+    #controls {
+      position: absolute;
+      bottom: 20px;
+      width: 100%;
+      text-align: center;
+      z-index: 2;
+    }
+    #controls button {
+      font-size: 24px;
+      padding: 12px 20px;
+      margin: 10px;
+      border-radius: 10px;
+      border: none;
+      background-color: #4CAF50;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+
+  <div id="controls">
+    <button id="leftBtn">←</button>
+    <button id="rightBtn">→</button>
+    <button id="restartBtn" style="display: none;">Заново</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
+
+    const cartImg = new Image();
+    cartImg.src = "cart.png";
+
+    const fallingObjImg = new Image();
+    fallingObjImg.src = "falling_object.png";
+
+    const backgroundImg = new Image();
+    backgroundImg.src = "background.png";
+
+    const catchSound = new Audio("catch.wav");
+    const failSound = new Audio("fail.wav");
+
+    let score = 0;
+    let gameOver = false;
+
+    const cart = {
+      width: 100,
+      height: 60,
+      x: canvas.width / 2 - 50,
+      y: canvas.height - 100,
+      dx: 0,
+      speed: 7
+    };
+
+    const fallingObj = {
+      width: 40,
+      height: 40,
+      x: Math.random() * (canvas.width - 40),
+      y: -40,
+      dy: 4
+    };
+
+    function resetFallingObj() {
+      fallingObj.x = Math.random() * (canvas.width - fallingObj.width);
+      fallingObj.y = -fallingObj.height;
+    }
+
+    function drawBackground() {
+      ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
+    }
+
+    function drawCart() {
+      cart.y = canvas.height - 100;
+      ctx.drawImage(cartImg, cart.x, cart.y, cart.width, cart.height);
+    }
+
+    function drawFallingObj() {
+      ctx.drawImage(fallingObjImg, fallingObj.x, fallingObj.y, fallingObj.width, fallingObj.height);
+    }
+
+    function drawScore() {
+      ctx.fillStyle = "#fff";
+      ctx.font = "24px Arial";
+      ctx.fillText("Очки: " + score, 20, 30);
+    }
+
+    function updateCart() {
+      if (leftPressed) cart.dx = -cart.speed;
+      else if (rightPressed) cart.dx = cart.speed;
+      else cart.dx = 0;
+
+      cart.x += cart.dx;
+      if (cart.x < 0) cart.x = 0;
+      if (cart.x + cart.width > canvas.width) cart.x = canvas.width - cart.width;
+    }
+
+    function updateFallingObj() {
+      fallingObj.y += fallingObj.dy;
+
+      if (
+        fallingObj.y + fallingObj.height >= cart.y &&
+        fallingObj.y + fallingObj.height <= cart.y + cart.height &&
+        fallingObj.x + fallingObj.width >= cart.x &&
+        fallingObj.x <= cart.x + cart.width
+      ) {
+        score++;
+        catchSound.play();
+        resetFallingObj();
+      }
+
+      if (fallingObj.y > canvas.height) {
+        endGame();
+      }
+    }
+
+    function endGame() {
+      gameOver = true;
+      failSound.play();
+      restartBtn.style.display = "inline-block";
+    }
+
+    function restartGame() {
+      score = 0;
+      gameOver = false;
+      resetFallingObj();
+      restartBtn.style.display = "none";
+      gameLoop();
+    }
+
+    // Управление с клавиатуры
+    let leftPressed = false;
+    let rightPressed = false;
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft") leftPressed = true;
+      if (e.key === "ArrowRight") rightPressed = true;
+      if (e.key === "r" && gameOver) restartGame();
+    });
+
+    document.addEventListener("keyup", (e) => {
+      if (e.key === "ArrowLeft") leftPressed = false;
+      if (e.key === "ArrowRight") rightPressed = false;
+    });
+
+// Управление с телефона
+    const leftBtn = document.getElementById("leftBtn");
+    const rightBtn = document.getElementById("rightBtn");
+    const restartBtn = document.getElementById("restartBtn");
+
+    leftBtn.addEventListener("touchstart", () => leftPressed = true);
+    leftBtn.addEventListener("touchend", () => leftPressed = false);
+
+    rightBtn.addEventListener("touchstart", () => rightPressed = true);
+    rightBtn.addEventListener("touchend", () => rightPressed = false);
+
+    restartBtn.addEventListener("click", () => {
+      if (gameOver) restartGame();
+    });
+
+    function gameLoop() {
+      if (gameOver) return;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawBackground();
+      updateCart();
+      updateFallingObj();
+      drawFallingObj();
+      drawCart();
+      drawScore();
+      requestAnimationFrame(gameLoop);
+    }
+
+    backgroundImg.onload = () => {
+      gameLoop();
+    };
+  </script>
+</body>
+</html>
